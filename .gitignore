@@ -1,0 +1,38 @@
+# Node
+node_modules/
+npm-debug.log*
+coverage/
+
+# Environment files 
+.env
+.env.*
+!.env.example
+
+# Docker
+.docker/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Editor
+.vscode/
+.idea/
+
+# Terraform
+.terraform/
+**/.terraform/
+**/.terraform.lock.hcl
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+terraform/terraform.tfvars
+
+# Vault
+vault/*.token
+vault/init/app-token.txt

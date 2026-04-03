@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────
+# Prometheus Configuration - qtec-task
+# Scrapes metrics from all API instances every 15 seconds
+# ─────────────────────────────────────────────────────────────
+
+global:
+  scrape_interval: 15s        # Scrape every 15 seconds
+  evaluation_interval: 15s    # Evaluate alert rules every 15s
+  scrape_timeout: 10s
+
+  # Labels added to all metrics from this Prometheus
+  external_labels:
+    monitor: 'qtec-task-monitor'
+    environment: 'production'
+
+# ─── Alerting Rules ───────────────────────────────────────────
+rule_files:
+  - /etc/prometheus/alert.rules.yml
+
+# ─── Scrape Configs ───────────────────────────────────────────
+scrape_configs:
+
+  # ── Prometheus itself ─────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ── API Instance 1 ────────────────────────────────────────
+  - job_name: 'qtec-api-1'
+    static_configs:
+      - targets: ['api1:3000']
+        labels:
+          instance: 'api-1'
+          app: 'qtec-task'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # ── API Instance 2 ────────────────────────────────────────
+  - job_name: 'qtec-api-2'
+    static_configs:
+      - targets: ['api2:3000']
+        labels:
+          instance: 'api-2'
+          app: 'qtec-task'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # ── API Instance 3 ────────────────────────────────────────
+  - job_name: 'qtec-api-3'
+    static_configs:
+      - targets: ['api3:3000']
+        labels:
+          instance: 'api-3'
+          app: 'qtec-task'
+    metrics_path: '/metrics'
+    scrape_interval: 10s

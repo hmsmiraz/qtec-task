@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────
+# Nginx Service: LoadBalancer
+# Type: LoadBalancer → AWS creates NLB automatically
+# This is the public entry point to our application
+# ─────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: qtec-nginx-svc
+  namespace: qtec-task
+  labels:
+    app: qtec-task
+    component: nginx
+  annotations:
+    # Use AWS Network Load Balancer (faster than ALB)
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
+    app: qtec-task
+    component: nginx
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP

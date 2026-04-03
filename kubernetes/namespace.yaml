@@ -1,0 +1,12 @@
+# ─────────────────────────────────────────────────────────────
+# Namespace: qtec-task
+# Isolates all resources from other workloads
+# ─────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qtec-task
+  labels:
+    app: qtec-task
+    environment: production
+    managed-by: kubectl

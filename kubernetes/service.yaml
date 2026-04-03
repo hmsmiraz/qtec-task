@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────────────────────
+# Service: qtec-task API
+# Type: ClusterIP (internal only)
+# Nginx will route to this service
+# ─────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: qtec-task-api-svc
+  namespace: qtec-task
+  labels:
+    app: qtec-task
+    component: api
+spec:
+  type: ClusterIP
+  selector:
+    app: qtec-task
+    component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP

@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────
+# HorizontalPodAutoscaler
+# Auto-scales API pods based on CPU usage
+# Handles ~100 req/sec by adding more pods
+# ─────────────────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: qtec-task-hpa
+  namespace: qtec-task
+  labels:
+    app: qtec-task
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: qtec-task-api
+
+  # Scale between 2 and 6 pods
+  minReplicas: 2
+  maxReplicas: 6
+
+  metrics:
+    # Scale up when CPU > 70%
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+    # Scale up when memory > 80%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+  behavior:
+    # Scale UP fast (traffic spike)
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+
+    # Scale DOWN slow (avoid flapping)
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120

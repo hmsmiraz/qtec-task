@@ -1,0 +1,142 @@
+# ─────────────────────────────────────────────────────────────
+# Deployment: qtec-task API
+# Strategy: RollingUpdate (zero-downtime)
+# Replicas: 3 (matches our Nginx upstream)
+# ─────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qtec-task-api
+  namespace: qtec-task
+  labels:
+    app: qtec-task
+    component: api
+spec:
+  # 3 replicas for high availability
+  # HPA will scale this between 2-6 based on CPU
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: qtec-task
+      component: api
+
+  # ── Zero-Downtime Rolling Update Strategy ─────────────────
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Max pods that can be unavailable during update
+      maxUnavailable: 1
+      # Max extra pods that can be created during update
+      maxSurge: 1
+  # How it works:
+  # Current: [v1, v1, v1]
+  # Step 1:  [v1, v1, v1, v2]  ← surge: 1 new pod added
+  # Step 2:  [v1, v1, v2]      ← unavailable: 1 old removed
+  # Step 3:  [v1, v1, v2, v2]  ← surge: 1 new pod added
+  # Step 4:  [v1, v2, v2]      ← unavailable: 1 old removed
+  # Step 5:  [v2, v2, v2]      ← complete!
+  # Users NEVER hit a down pod — Nginx routes to healthy ones
+
+  template:
+    metadata:
+      labels:
+        app: qtec-task
+        component: api
+      annotations:
+        # Force pod restart when configmap changes
+        checksum/config: "{{ include (print $.Template.BasePath '/configmap.yaml') . | sha256sum }}"
+
+    spec:
+      # ── Security Context ──────────────────────────────────
+      # Run as non-root (matches our Dockerfile)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+
+      # ── Containers ────────────────────────────────────────
+      containers:
+        - name: api
+          # Replace with your Docker Hub username
+          image: hmsmiraz/qtec-task:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+
+          # ── Environment from ConfigMap ───────────────────
+          envFrom:
+            - configMapRef:
+                name: qtec-task-config
+
+          # ── Vault Token from Secret ──────────────────────
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: qtec-task-secrets
+                  key: VAULT_TOKEN
+            # Pod name as hostname for processedBy field
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+          # ── Resource Limits ──────────────────────────────
+          # t3.small has 2GB RAM — be conservative
+          resources:
+            requests:
+              cpu:    "100m"    # 0.1 CPU
+              memory: "128Mi"   # 128MB
+            limits:
+              cpu:    "300m"    # 0.3 CPU
+              memory: "256Mi"   # 256MB
+
+          # ── Liveness Probe ───────────────────────────────
+          # K8s restarts pod if this fails 3 times
+          livenessProbe:
+            httpGet:
+              path: /status/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          # ── Readiness Probe ──────────────────────────────
+          # K8s only sends traffic when this passes
+          # During rolling update: new pod must be ready
+          # before old pod is terminated
+          readinessProbe:
+            httpGet:
+              path: /status/ready
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          # ── Lifecycle Hook ───────────────────────────────
+          # Give pod 15s to finish current requests
+          # before K8s sends SIGTERM
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+
+      # ── Termination Grace Period ──────────────────────────
+      # Total time K8s waits before force-killing pod
+      terminationGracePeriodSeconds: 30
+
+      # ── Topology Spread ───────────────────────────────────
+      # Spread pods across different nodes
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: qtec-task

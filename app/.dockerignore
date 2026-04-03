@@ -1,0 +1,37 @@
+# Dependencies (will be installed fresh inside Docker)
+node_modules/
+
+# Test files (not needed in production image)
+tests/
+coverage/
+
+# Environment files (secrets should never go into image)
+.env
+.env.*
+!.env.example
+
+# Git files
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Docker files (no need to copy these into the image)
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# README (not needed in image)
+README.md
