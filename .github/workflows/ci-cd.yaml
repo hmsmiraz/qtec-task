@@ -155,15 +155,19 @@ jobs:
 
       - name: Deploy to EKS (zero-downtime rolling update)
         run: |
-          # Update image to new SHA tag
+          # ✅ Use 'latest' tag — always exists after build job
           kubectl set image deployment/qtec-task-api \
-            api=${{ secrets.DOCKER_USERNAME }}/qtec-task:sha-${{ github.sha }} \
+            api=${{ secrets.DOCKER_USERNAME }}/qtec-task:latest \
             -n qtec-task
 
-          # Wait for rollout — ensures zero-downtime
+          # ✅ Force new rollout even if tag is same
+          kubectl rollout restart deployment/qtec-task-api \
+            -n qtec-task
+
+          # ✅ Increased timeout for t3.small nodes
           kubectl rollout status deployment/qtec-task-api \
             -n qtec-task \
-            --timeout=300s
+            --timeout=600s
 
       - name: Verify deployment
         run: |
